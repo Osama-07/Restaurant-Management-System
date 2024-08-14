@@ -74,3 +74,4 @@ D:\سطح المكتب\RestaurantAPI\RestaurantAPI\bin\Debug\net8.0\Microsoft.Ex
 D:\سطح المكتب\RestaurantAPI\RestaurantAPI\bin\Debug\net8.0\Util.dll
 D:\سطح المكتب\RestaurantAPI\RestaurantAPI\bin\Debug\net8.0\Util.pdb
 D:\سطح المكتب\RestaurantAPI\RestaurantAPI\bin\Debug\net8.0\Util.dll.config
+D:\سطح المكتب\RestaurantAPI\RestaurantAPI\obj\Debug\net8.0\RestaurantAPI.sourcelink.json
