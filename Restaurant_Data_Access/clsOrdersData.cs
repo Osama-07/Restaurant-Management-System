@@ -13,7 +13,7 @@ namespace Restaurant_Data_Access
         private static string? SourceName = Assembly.GetExecutingAssembly().GetName().Name;
 
 
-        public static int? AddNewOrder(OrdersDTO newOrder)
+        public static int AddNewOrder(OrdersDTO newOrder)
         {
 
             if (string.IsNullOrEmpty(ConnectionString))
@@ -22,7 +22,7 @@ namespace Restaurant_Data_Access
                 throw new InvalidOperationException("ConnectionString is not set.");
             }
 
-            int? newID = null;
+            int newID = 0;
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
             using (SqlCommand cmd = new SqlCommand("SP_AddNewOrder", conn))
@@ -50,7 +50,7 @@ namespace Restaurant_Data_Access
 
                     cmd.ExecuteNonQuery();
 
-                    newID = (int?)cmd.Parameters["@NewOrderID"].Value;
+                    newID = (int)cmd.Parameters["@NewOrderID"].Value;
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
@@ -61,7 +61,7 @@ namespace Restaurant_Data_Access
             return newID;
         }
 
-        public static async Task<int?> AddNewOrderAsync(OrdersDTO newOrder)
+        public static async Task<int> AddNewOrderAsync(OrdersDTO newOrder)
         {
 
             if (string.IsNullOrEmpty(ConnectionString))
@@ -70,7 +70,7 @@ namespace Restaurant_Data_Access
                 throw new InvalidOperationException("ConnectionString is not set.");
             }
 
-            int? newID = null;
+            int newID = 0;
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
             using (SqlCommand cmd = new SqlCommand("SP_AddNewOrder", conn))
@@ -98,7 +98,7 @@ namespace Restaurant_Data_Access
 
                     await cmd.ExecuteNonQueryAsync();
 
-                    newID = (int?)cmd.Parameters["@NewOrderID"].Value;
+                    newID = (int)cmd.Parameters["@NewOrderID"].Value;
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
@@ -109,7 +109,7 @@ namespace Restaurant_Data_Access
             return newID;
         }
 
-        public static OrdersDTO? GetOrderByID(int? id)
+        public static OrdersDTO? GetOrderByID(int id)
         {
             if (id < 0) return null; // check PersonID maybe data is not correct.
 
@@ -141,7 +141,8 @@ namespace Restaurant_Data_Access
                                 reader.GetInt32(reader.GetOrdinal("OrderID")),
                                 reader.IsDBNull(reader.GetOrdinal("UserID")) ? null : reader.GetInt32(reader.GetOrdinal("UserID")),
                                 reader.GetDateTime(reader.GetOrdinal("OrderDate")),
-                                reader.GetDecimal(reader.GetOrdinal("TotalAmount"))
+                                reader.GetDecimal(reader.GetOrdinal("TotalAmount")),
+                                reader.GetDecimal(reader.GetOrdinal("AppliedTaxRate"))
                             );
                         }
                         else
@@ -157,7 +158,7 @@ namespace Restaurant_Data_Access
             return null;
         }
 
-        public static async Task<OrdersDTO?> GetOrderByIDAsync(int? id)
+        public static async Task<OrdersDTO?> GetOrderByIDAsync(int id)
         {
             if (id < 0) return null; // check OrderID maybe data is not correct.
 
@@ -189,7 +190,8 @@ namespace Restaurant_Data_Access
                                 reader.GetInt32(reader.GetOrdinal("OrderID")),
                                 await reader.IsDBNullAsync(reader.GetOrdinal("UserID")) ? null : reader.GetInt32(reader.GetOrdinal("UserID")),
                                 reader.GetDateTime(reader.GetOrdinal("OrderDate")),
-                                reader.GetDecimal(reader.GetOrdinal("TotalAmount"))
+                                reader.GetDecimal(reader.GetOrdinal("TotalAmount")),
+                                reader.GetDecimal(reader.GetOrdinal("AppliedTaxRate"))
                             );
                         }
                         else
@@ -423,7 +425,7 @@ namespace Restaurant_Data_Access
             return IsDeleted;
         }
 
-        public static List<OrdersDTO?> GetAllOrders()
+        public static IEnumerable<OrdersDTO?> GetAllOrders()
         {
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -451,7 +453,8 @@ namespace Restaurant_Data_Access
                                  reader.GetInt32(reader.GetOrdinal("OrderID")),
                                  reader.IsDBNull(reader.GetOrdinal("UserID")) ? null : reader.GetInt32(reader.GetOrdinal("UserID")),
                                  reader.GetDateTime(reader.GetOrdinal("OrderDate")),
-                                 reader.GetDecimal(reader.GetOrdinal("TotalAmount"))
+                                 reader.GetDecimal(reader.GetOrdinal("TotalAmount")),
+                                 reader.GetDecimal(reader.GetOrdinal("AppliedTaxRate"))
                             ));
                         }
                     }
@@ -465,7 +468,7 @@ namespace Restaurant_Data_Access
             return OrdersList;
         }
 
-        public static async Task<List<OrdersDTO?>> GetAllOrdersAsync()
+        public static async Task<IEnumerable<OrdersDTO?>> GetAllOrdersAsync()
         {
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -492,7 +495,8 @@ namespace Restaurant_Data_Access
                                  reader.GetInt32(reader.GetOrdinal("OrderID")),
                                  await reader.IsDBNullAsync(reader.GetOrdinal("UserID")) ? null : reader.GetInt32(reader.GetOrdinal("UserID")),
                                  reader.GetDateTime(reader.GetOrdinal("OrderDate")),
-                                 reader.GetDecimal(reader.GetOrdinal("TotalAmount"))
+                                 reader.GetDecimal(reader.GetOrdinal("TotalAmount")),
+								 await reader.IsDBNullAsync(reader.GetOrdinal("AppliedTaxRate")) ? null : reader.GetDecimal(reader.GetOrdinal("AppliedTaxRate"))
                             ));
                         }
                     }
@@ -504,6 +508,181 @@ namespace Restaurant_Data_Access
             }
 
             return OrdersList;
+        }
+
+        public static InvoiceDTO? GetInvoice(int? orderId)
+        {
+            if (orderId < 0 || !orderId.HasValue || orderId > int.MaxValue) return null; // check OrderId maybe data is not correct.
+
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+
+            InvoiceDTO invoice = null!;
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            {
+                conn.Open();
+
+                using (SqlCommand cmd = new SqlCommand("SP_GetInvoiceHeader", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@OrderID", orderId); // OrderID parameter.
+
+                    try
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                // 1 ---> Get Invoice Header.
+                                invoice = new InvoiceDTO
+                                (
+                                    reader.GetInt32(reader.GetOrdinal("OrderID")),
+                                    reader.GetDateTime(reader.GetOrdinal("OrderDate")),
+                                    reader.GetString(reader.GetOrdinal("CreatedByUser")),
+                                    reader.GetDecimal(reader.GetOrdinal("TotalAmount")),
+                                    reader.GetDecimal(reader.GetOrdinal("AppliedTaxRate"))
+                                );
+                            }
+                        }
+                    }
+                    catch (Exception ex) when (ex is SqlException || ex is Exception)
+                    {
+                        clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetInvoiceHeader: {ex.Message}", clsUtil.enEventType.Error);
+                    }
+                }
+
+
+                // 2 ---> Get Invoice Details.
+                invoice.OrderDetails = GetInvoiceDetails(conn, orderId);
+            }
+
+            return invoice;
+        }
+        
+        public static async Task<InvoiceDTO?> GetInvoiceAsync(int? orderId)
+        {
+            if (orderId < 0 || !orderId.HasValue || orderId > int.MaxValue) return null; // check OrderId maybe data is not correct.
+
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+
+            InvoiceDTO invoice = null!;
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            {
+                await conn.OpenAsync();
+
+                using (SqlCommand cmd = new SqlCommand("SP_GetInvoiceHeader", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@OrderID", orderId); // OrderID parameter.
+
+                    try
+                    {
+                        using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                // 1 ---> Get Invoice Header.
+                                invoice = new InvoiceDTO
+                                (
+                                    reader.GetInt32(reader.GetOrdinal("OrderID")),
+                                    reader.GetDateTime(reader.GetOrdinal("OrderDate")),
+                                    reader.GetString(reader.GetOrdinal("CreatedByUser")),
+                                    reader.GetDecimal(reader.GetOrdinal("TotalAmount")),
+                                    reader.GetDecimal(reader.GetOrdinal("AppliedTaxRate"))
+                                );
+                            }
+                        }
+                    }
+                    catch (Exception ex) when (ex is SqlException || ex is Exception)
+                    {
+                        clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetInvoiceHeader: {ex.Message}", clsUtil.enEventType.Error);
+                    }
+                }
+
+
+                // 2 ---> Get Invoice Details.
+                invoice.OrderDetails = GetInvoiceDetails(conn, orderId);
+            }
+
+            return invoice;
+        }
+
+        private static List<InvoiceDTO.OrderDetail> GetInvoiceDetails(SqlConnection conn, int? orderId)
+        {
+            var list = new List<InvoiceDTO.OrderDetail>();
+
+            // 1 ==> Get Invoice Header.
+            using (SqlCommand cmd = new SqlCommand("SP_GetInvoiceDetails", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@OrderID", orderId); // OrderID parameter.
+
+                try
+                {
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new InvoiceDTO.OrderDetail
+                            (
+                                reader.GetString(reader.GetOrdinal("ItemName")),
+                                reader.GetString(reader.GetOrdinal("CategoryName")),
+                                reader.GetInt32(reader.GetOrdinal("Quantity")),
+                                reader.GetDecimal(reader.GetOrdinal("Price"))
+                            ));
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetInvoiceHeader: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return list;
+        }
+        private static async Task<List<InvoiceDTO.OrderDetail>> GetInvoiceDetailsAsync(SqlConnection conn, int? orderId)
+        {
+            var list = new List<InvoiceDTO.OrderDetail>();
+
+            // 1 ==> Get Invoice Header.
+            using (SqlCommand cmd = new SqlCommand("SP_GetInvoiceDetails", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@OrderID", orderId); // OrderID parameter.
+
+                try
+                {
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            list.Add(new InvoiceDTO.OrderDetail
+                            (
+                                reader.GetString(reader.GetOrdinal("ItemName")),
+                                reader.GetString(reader.GetOrdinal("CategoryName")),
+                                reader.GetInt32(reader.GetOrdinal("Quantity")),
+                                reader.GetDecimal(reader.GetOrdinal("Price"))
+                            ));
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetInvoiceHeader: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return list;
         }
     }
 }

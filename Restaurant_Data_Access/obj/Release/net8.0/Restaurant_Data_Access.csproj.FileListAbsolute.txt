@@ -1,0 +1,17 @@
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\bin\Release\net8.0\Restaurant_Data_Access.deps.json
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\bin\Release\net8.0\Restaurant_Data_Access.dll
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\bin\Release\net8.0\Restaurant_Data_Access.pdb
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\bin\Release\net8.0\Util.dll
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\bin\Release\net8.0\Util.pdb
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\bin\Release\net8.0\Util.dll.config
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.csproj.AssemblyReference.cache
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.GeneratedMSBuildEditorConfig.editorconfig
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.AssemblyInfoInputs.cache
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.AssemblyInfo.cs
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.csproj.CoreCompileInputs.cache
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.sourcelink.json
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaura.2170056D.Up2Date
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.dll
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\refint\Restaurant_Data_Access.dll
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\Restaurant_Data_Access.pdb
+D:\سطح المكتب\RestaurantAPI_Project\Restaurant_Data_Access\obj\Release\net8.0\ref\Restaurant_Data_Access.dll

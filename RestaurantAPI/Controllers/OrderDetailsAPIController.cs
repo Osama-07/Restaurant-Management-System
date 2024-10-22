@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Restaurant_Business;
 using Restaurant_Data_Access.DTOs.OrderDetailsDTOs;
 
@@ -13,60 +12,84 @@ namespace RestaurantAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<OrderDetailsDTO?>> AddNewOrderDetails(OrderDetailsDTO OrderDetails)
+        public async Task<ActionResult<string>> AddNewOrderDetails(List<OrderDetailsDTO> OrderDetails)
         {
-            if (OrderDetails.OrderID < 1 || OrderDetails.OrderID > int.MaxValue ||
-                OrderDetails.MenuItemID < 1 || OrderDetails.MenuItemID > int.MaxValue || 
-                OrderDetails.Quantity < 1 || OrderDetails.Quantity > int.MaxValue ||
-                OrderDetails.Price < 0 || OrderDetails.Price > decimal.MaxValue)
+            //First Step: Check if Info is Correct.
+            foreach (var orderDetails in OrderDetails)
             {
-                return BadRequest("No Accept OrderDetails Info");
+                if (orderDetails.OrderID < 1 || orderDetails.OrderID > int.MaxValue ||
+                    orderDetails.MenuItemID < 1 || orderDetails.MenuItemID > int.MaxValue ||
+                    orderDetails.Quantity < 1 || orderDetails.Quantity > int.MaxValue ||
+                    orderDetails.Price < 0 || orderDetails.Price > decimal.MaxValue)
+                {
+                    return BadRequest("No Accept OrderDetails Info");
+                }
             }
 
-            var newOrderDetails = new clsOrderDetails(OrderDetails);
+            bool IsAdded = await clsOrderDetails.AddNewListOrderDetailsAsync(OrderDetails);
 
-            if (await newOrderDetails.SaveAsync())
+            if (IsAdded)
             {
-                OrderDetails.OrderDetailsID = newOrderDetails.OrderDetailsID;
-
-                return CreatedAtRoute("GetOrderDetailsByID", new { id = newOrderDetails.OrderDetailsID }, OrderDetails);
+                return Ok("Added Successfully.");
             }
             else
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error Adding OrderDetails.");
 
         }
 
-        [HttpGet("{id}", Name = "GetOrderDetailsByID")]
+        [HttpGet("{orderId}&{menuItemId}", Name = "GetOrderDetailsByOrderIDAsync")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<OrderDetailsDTO?>> GetOrderDetailsByID(int? id)
+        public async Task<ActionResult<List<OrderDetailsDTO?>>> GetOrderDetailsByOrderIDAsync(int? orderId, int? menuItemId)
         {
-            if (id == null || id < 1 || id > int.MaxValue)
+            if (orderId == null || orderId < 1 || orderId > int.MaxValue)
             {
-                return BadRequest($"Not Accept this ID {id}");
+                return BadRequest($"Not Accept this ID {orderId}");
             }
 
-            var OrderDetails = await clsOrderDetails.GetOrderDetailsByIDAsync(id);
+            var OrderDetails = await clsOrderDetails.GetOrderDetailsByOrderIDAsync(orderId, menuItemId);
 
             if (OrderDetails == null)
             {
-                return NotFound($"Not Found OrderDetails With ID {id}");
+                return NotFound($"Not Found OrderDetails With ID {orderId}");
             }
 
             return Ok(OrderDetails.ODTO);
         }
 
-        [HttpPut("ID/{id}", Name = "UpdateOrderDetails")]
+        [HttpGet("list/{orderId}", Name = "GetListOrderDetailsByOrderID")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<List<OrderDetailsDTO?>>> GetListOrderDetailsByOrderIDAsync(int? orderId)
+        {
+            if (orderId == null || orderId < 1 || orderId > int.MaxValue)
+            {
+                return BadRequest($"Not Accept this ID {orderId}");
+            }
+
+            var OrderDetails = await clsOrderDetails.GetListOrderDetailsByOrderIDAsync(orderId);
+
+            if (OrderDetails == null)
+            {
+                return NotFound($"Not Found OrderDetails With ID {orderId}");
+            }
+
+            return Ok(OrderDetails);
+        }
+
+        [HttpPut("update/{orderId}&{menuItemId}", Name = "UpdateOrderDetails")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<OrderDetailsDTO?>> UpdateOrderDetailsAsync(int? id, OrderDetailsDTO OrderDetails)
+        public async Task<ActionResult<OrderDetailsDTO?>> UpdateOrderDetailsAsync(int? orderId, int? menuItemId, OrderDetailsDTO OrderDetails)
         {
-            if (id == null || id < 1 || id > int.MaxValue)
+            if (orderId == null || orderId < 1 || orderId > int.MaxValue ||
+                menuItemId == null || menuItemId < 1 || menuItemId > int.MaxValue)
             {
-                return BadRequest($"Not Accept this ID {id}");
+                return BadRequest($"Not Accept this ID {orderId}");
             }
 
             if (OrderDetails.OrderID < 1 || OrderDetails.OrderID > int.MaxValue ||
@@ -77,14 +100,13 @@ namespace RestaurantAPI.Controllers
                 return BadRequest("No Accept OrderDetails Info");
             }
 
-            var uOrderDetails = await clsOrderDetails.GetOrderDetailsByIDAsync(id);
+            var uOrderDetails = await clsOrderDetails.GetOrderDetailsByOrderIDAsync(orderId, menuItemId);
 
             if (uOrderDetails == null)
             {
-                return NotFound($"Not Found OrderDetails With ID {id}.");
+                return NotFound($"Not Found OrderDetails With ID {orderId}.");
             }
 
-            OrderDetails.OrderDetailsID = id;
             uOrderDetails = new clsOrderDetails(OrderDetails, clsOrderDetails.enMode.Update);
 
             if (await uOrderDetails.SaveAsync())
@@ -95,52 +117,54 @@ namespace RestaurantAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error Updating OrderDetails.");
         }
 
-        [HttpGet("ID/{id}", Name = "IsOrderDetailsExists")]
+        [HttpGet("isExists/{orderId}&{menuItemId}", Name = "IsOrderDetailsExists")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<bool>> IsOrderDetailsExistsAsync(int? id)
+        public async Task<ActionResult<bool>> IsOrderDetailsExistsAsync(int? orderId, int? menuItemId)
         {
-            if (id < 1 || id == null || id > int.MaxValue)
+            if (orderId < 1 || orderId == null || orderId > int.MaxValue ||
+                menuItemId < 1 || menuItemId == null || menuItemId > int.MaxValue)
             {
-                return BadRequest($"No Accept ID {id} .");
+                return BadRequest($"No Accept ID {orderId} .");
             }
 
-            if (await clsOrderDetails.IsOrderDetailsExistsAsync(id))
+            if (await clsOrderDetails.IsOrderDetailsExistsAsync(orderId, menuItemId))
             {
-                return Ok($"OrderDetails With ID {id} Is Exists.");
+                return Ok($"OrderDetails With OrderID {orderId} Is Exists.");
             }
             else
             {
-                return NotFound($"Not Found OrderDetails With ID {id} .");
+                return NotFound($"Not Found OrderDetails With OrderID {orderId} .");
             }
         }
 
-        [HttpDelete("ID/{id}", Name = "DeleteOrderDetails")]
+        [HttpDelete("delete/{orderId}&{menuItemId}", Name = "DeleteOrderDetails")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<bool>> DeleteOrderDetailsAsync(int? id)
+        public async Task<ActionResult<bool>> DeleteOrderDetailsAsync(int? orderId, int? menuItemId)
         {
-            if (id < 1 || id == null)
+            if (orderId < 1 || orderId == null ||
+                menuItemId < 1 || menuItemId == null)
             {
-                return BadRequest($"No Accept ID {id} .");
+                return BadRequest($"No Accept ID {orderId} .");
             }
 
-            if (await clsOrderDetails.IsOrderDetailsExistsAsync(id))
+            if (await clsOrderDetails.IsOrderDetailsExistsAsync(orderId, menuItemId))
             {
-                if (await clsOrderDetails.DeleteOrderDetailsAsync(id))
+                if (await clsOrderDetails.DeleteOrderItemAsync(orderId, menuItemId))
                 {
-                    return Ok($"Deleted OrderDetails With ID {id} Successfully.");
+                    return Ok($"Deleted OrderDetails With ID {orderId} Successfully.");
                 }
                 else
                     return StatusCode(StatusCodes.Status500InternalServerError, "Error Delete OrderDetails.");
             }
             else
             {
-                return NotFound($"Not Found OrderDetails With ID {id} .");
+                return NotFound($"Not Found OrderDetails With ID {orderId} .");
             }
         }
 

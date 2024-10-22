@@ -55,6 +55,30 @@ namespace RestaurantAPI.Controllers
             return Ok(User.UDTO);
         }
 
+        [HttpGet("UserPass/{id}", Name = "GetUserPassword")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<UserPsswordDTO>> GetUserPasswordAsync(int? id)
+        {
+            // Check for null and valid ID range
+            if (!id.HasValue || id.Value < 1 || id.Value > int.MaxValue)
+            {
+                return BadRequest($"Not Accept User With ID {id}.");
+            }
+
+            // Check if user exists
+            if (!clsUsers.IsUserExists(id.Value))
+            {
+                return NotFound($"Not Found User With ID {id}.");
+            }
+
+            // Retrieve user password
+            var userPassword = await clsUsers.GetUserPasswordAsync(id.Value);
+
+            return Ok(userPassword);
+        }
+
         [HttpPut("ID/{id}", Name = "UpdateUser")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -92,6 +116,35 @@ namespace RestaurantAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Error Updating User.");
         }
 
+        [HttpPut("user/", Name = "SetUserPassword")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<bool>> SetUserPasswordAsync(UserPsswordDTO user)
+        {
+            if (user.UserID < 1 || user.UserID > int.MaxValue)
+            {
+                return BadRequest($"Not Accept this ID {user.UserID}");
+            }
+
+            if (string.IsNullOrEmpty(user.Password) || user.Password.Length > 64)
+            {
+                return BadRequest("No Accept User Info");
+            }
+
+            if (!await clsUsers.IsUserExistsAsync(user.UserID))
+            {
+                return NotFound($"Not Found User With ID {user.UserID}.");
+            }
+
+
+            if (await clsUsers.SetUserPasswordAsync(user))
+                return Ok("Updated Password Succeeded.");
+            else
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error Update User Password.");
+        }
+
         [HttpGet("ID/{id}", Name = "IsUserExists")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -114,7 +167,31 @@ namespace RestaurantAPI.Controllers
             }
         }
 
-        [HttpDelete("ID/{id}", Name = "DeleteUser")]
+		[HttpPost("VerifyLoginCredentials")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status404NotFound)]
+		[ProducesResponseType(StatusCodes.Status400BadRequest)]
+		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+		public async Task<ActionResult<UsersInfoWithoutPasswordDTO?>> VerifyLoginCredentialsAsync(LoginDTO login)
+		{
+			if (string.IsNullOrEmpty(login.Username) || string.IsNullOrEmpty(login.Password))
+			{
+				return BadRequest($"No Accept this Info.");
+			}
+
+            var userInfo = await clsUsers.VerifyLoginCredentialsAsync(login);
+
+			if (userInfo != null)
+			{
+				return Ok(userInfo);
+			}
+			else
+			{
+				return NotFound($"Not Found User With this info.");
+			}
+		}
+
+		[HttpDelete("ID/{id}", Name = "DeleteUser")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

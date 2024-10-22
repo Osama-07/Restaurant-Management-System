@@ -13,7 +13,7 @@ namespace Restaurant_Data_Access
 
         private static string? SourceName = Assembly.GetExecutingAssembly().GetName().Name;
 
-        public static int? AddNewOrderDetails(OrderDetailsDTO newOrderDetails)
+        public static bool AddNewOrderDetails(OrderDetailsDTO newOrderDetails)
         {
 
             if (string.IsNullOrEmpty(ConnectionString))
@@ -22,7 +22,7 @@ namespace Restaurant_Data_Access
                 throw new InvalidOperationException("ConnectionString is not set.");
             }
 
-            int? newID = null;
+            bool IsAdded = false;
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
             using (SqlCommand cmd = new SqlCommand("SP_AddNewOrderDetails", conn))
@@ -34,13 +34,6 @@ namespace Restaurant_Data_Access
                 cmd.Parameters.AddWithValue("@MenuItemID", newOrderDetails.MenuItemID);
                 cmd.Parameters.AddWithValue("@Quantity", newOrderDetails.Quantity);
                 cmd.Parameters.AddWithValue("@Price", newOrderDetails.Price);
-
-                // output parameter.
-                SqlParameter outputParameter = new SqlParameter("@NewOrderDetailsID", SqlDbType.Int)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                cmd.Parameters.Add(outputParameter);
 
                 try
                 {
@@ -48,18 +41,19 @@ namespace Restaurant_Data_Access
 
                     cmd.ExecuteNonQuery();
 
-                    newID = (int?)cmd.Parameters["@NewOrderDetailsID"].Value;
+                    IsAdded = true;
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
                     clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_AddNewOrderDetails: {ex.Message}", clsUtil.enEventType.Error);
+                    IsAdded = false;
                 }
             }
 
-            return newID;
+            return IsAdded;
         }
 
-        public static async Task<int?> AddNewOrderDetailsAsync(OrderDetailsDTO newOrderDetails)
+        public static async Task<bool> AddNewOrderDetailsAsync(OrderDetailsDTO newOrderDetails)
         {
 
             if (string.IsNullOrEmpty(ConnectionString))
@@ -68,7 +62,7 @@ namespace Restaurant_Data_Access
                 throw new InvalidOperationException("ConnectionString is not set.");
             }
 
-            int? newID = null;
+            bool IsAdded = false;
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
             using (SqlCommand cmd = new SqlCommand("SP_AddNewOrderDetails", conn))
@@ -81,33 +75,70 @@ namespace Restaurant_Data_Access
                 cmd.Parameters.AddWithValue("@Quantity", newOrderDetails.Quantity);
                 cmd.Parameters.AddWithValue("@Price", newOrderDetails.Price);
 
-                // output parameter.
-                SqlParameter outputParameter = new SqlParameter("@NewOrderDetailsID", SqlDbType.Int)
-                {
-                    Direction = ParameterDirection.Output
-                };
-                cmd.Parameters.Add(outputParameter);
-
                 try
                 {
                     await conn.OpenAsync();
 
                     await cmd.ExecuteNonQueryAsync();
 
-                    newID = (int?)cmd.Parameters["@NewOrderDetailsID"].Value;
+                    IsAdded = true;
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
                     clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_AddNewOrderDetails: {ex.Message}", clsUtil.enEventType.Error);
+                    IsAdded = false;
                 }
             }
 
-            return newID;
+            return IsAdded;
         }
 
-        public static OrderDetailsDTO? GetOrderDetailsByID(int? id)
+        public static async Task<bool> AddNewListOrderDetailsAsync(List<OrderDetailsDTO> newOrderDetailsList)
         {
-            if (id < 0) return null; // check PersonID maybe data is not correct.
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+
+            bool IsAdded = false;
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            {
+                await conn.OpenAsync();
+
+                foreach (var newOrderDetails in newOrderDetailsList)
+                {
+                    using (SqlCommand cmd = new SqlCommand("SP_AddNewOrderDetails", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+
+                        cmd.Parameters.AddWithValue("@OrderID", newOrderDetails.OrderID);
+                        cmd.Parameters.AddWithValue("@MenuItemID", newOrderDetails.MenuItemID);
+                        cmd.Parameters.AddWithValue("@Quantity", newOrderDetails.Quantity);
+                        cmd.Parameters.AddWithValue("@Price", newOrderDetails.Price);
+
+                        try
+                        {
+                            await cmd.ExecuteNonQueryAsync();
+
+                            IsAdded = true;
+                        }
+                        catch (Exception ex) when (ex is SqlException || ex is Exception)
+                        {
+                            clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_AddNewOrderDetails: {ex.Message}", clsUtil.enEventType.Error);
+                            IsAdded = false;
+                        }
+                    }
+                }
+            }
+
+            return IsAdded;
+        }
+
+        public static OrderDetailsDTO? GetOrderDetailsByOrderID(int? orderId, int? menuItemId)
+        {
+            if (orderId < 1 || menuItemId < 1) return null; // check OrderID Or MenuItemID maybe data is not correct.
 
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -116,12 +147,13 @@ namespace Restaurant_Data_Access
             }
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
-            using (SqlCommand cmd = new SqlCommand("SP_GetOrderDetailsByID", conn))
+            using (SqlCommand cmd = new SqlCommand("SP_GetOrderDetailsByOrderIDAndMenuItemID", conn))
             {
 
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", id); // OrderDetailsID parameter.
+                cmd.Parameters.AddWithValue("@OrderID", orderId);
+                cmd.Parameters.AddWithValue("@MenuItemID", menuItemId);
 
                 try
                 {
@@ -134,7 +166,6 @@ namespace Restaurant_Data_Access
                         {
                             return new OrderDetailsDTO
                             (
-                                reader.GetInt32(reader.GetOrdinal("OrderDetailsID")),
                                 reader.GetInt32(reader.GetOrdinal("OrderID")),
                                 reader.GetInt32(reader.GetOrdinal("MenuItemID")),
                                 reader.GetInt32(reader.GetOrdinal("Quantity")),
@@ -147,16 +178,16 @@ namespace Restaurant_Data_Access
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
-                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetOrderDetailsByID: {ex.Message}", clsUtil.enEventType.Error);
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetOrderDetailsByOrderID: {ex.Message}", clsUtil.enEventType.Error);
                 }
             }
 
             return null;
         }
 
-        public static async Task<OrderDetailsDTO?> GetOrderDetailsByIDAsync(int? id)
+        public static async Task<OrderDetailsDTO?> GetOrderDetailsByOrderIDAsync(int? orderId, int? menuItemId)
         {
-            if (id < 0) return null; // check OrderDetailsID maybe data is not correct.
+            if (orderId < 1 || menuItemId < 1) return null; // check OrderID Or MenuItemID maybe data is not correct.
 
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -165,13 +196,13 @@ namespace Restaurant_Data_Access
             }
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
-            using (SqlCommand cmd = new SqlCommand("SP_GetOrderDetailsByID", conn))
+            using (SqlCommand cmd = new SqlCommand("SP_GetOrderDetailsByOrderIDAndMenuItemID", conn))
             {
 
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", id); // OrderDetailsID parameter.
-
+                cmd.Parameters.AddWithValue("@OrderID", orderId);
+                cmd.Parameters.AddWithValue("@MenuItemID", menuItemId);
                 try
                 {
                     await conn.OpenAsync();
@@ -183,7 +214,6 @@ namespace Restaurant_Data_Access
                         {
                             return new OrderDetailsDTO
                             (
-                                reader.GetInt32(reader.GetOrdinal("OrderDetailsID")),
                                 reader.GetInt32(reader.GetOrdinal("OrderID")),
                                 reader.GetInt32(reader.GetOrdinal("MenuItemID")),
                                 reader.GetInt32(reader.GetOrdinal("Quantity")),
@@ -196,11 +226,107 @@ namespace Restaurant_Data_Access
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
-                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetOrderDetailsByID: {ex.Message}", clsUtil.enEventType.Error);
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetOrderDetailsByOrderID: {ex.Message}", clsUtil.enEventType.Error);
                 }
             }
 
             return null;
+        }
+
+        public static List<OrderDetailsDTO?> GetListOrderDetailsByOrderID(int? orderId)
+        {
+            if (orderId < 0) return null!; // check OrderID maybe data is not correct.
+
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+
+            var orderDetails = new List<OrderDetailsDTO>();
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            using (SqlCommand cmd = new SqlCommand("SP_GetOrderDetailsByOrderID", conn))
+            {
+
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@OrderID", orderId); // OrderID parameter.
+
+                try
+                {
+                    conn.Open();
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+
+                        while (reader.Read())
+                        {
+                            orderDetails.Add(new OrderDetailsDTO
+                            (
+                                reader.GetInt32(reader.GetOrdinal("OrderID")),
+                                reader.GetInt32(reader.GetOrdinal("MenuItemID")),
+                                reader.GetInt32(reader.GetOrdinal("Quantity")),
+                                reader.GetDecimal(reader.GetOrdinal("Price"))
+                            ));
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetOrderDetailsByOrderID: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return orderDetails!;
+        }
+
+        public static async Task<List<OrderDetailsDTO?>> GetListOrderDetailsByOrderIDAsync(int? orderId)
+        {
+            if (orderId < 0) return null!; // check OrderID maybe data is not correct.
+
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+
+            var orderDetails = new List<OrderDetailsDTO>();
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            using (SqlCommand cmd = new SqlCommand("SP_GetOrderDetailsByOrderID", conn))
+            {
+
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@OrderID", orderId); // OrderID parameter.
+
+                try
+                {
+                    await conn.OpenAsync();
+
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+
+                        while (reader.Read())
+                        {
+                            orderDetails.Add(new OrderDetailsDTO
+                            (
+                                reader.GetInt32(reader.GetOrdinal("OrderID")),
+                                reader.GetInt32(reader.GetOrdinal("MenuItemID")),
+                                reader.GetInt32(reader.GetOrdinal("Quantity")),
+                                reader.GetDecimal(reader.GetOrdinal("Price"))
+                            ));
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetOrderDetailsByOrderID: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return orderDetails!;
         }
 
         public static bool UpdateOrderDetails(OrderDetailsDTO uOrderDetails)
@@ -217,7 +343,6 @@ namespace Restaurant_Data_Access
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", uOrderDetails.OrderDetailsID);
                 cmd.Parameters.AddWithValue("@OrderID", uOrderDetails.OrderID);
                 cmd.Parameters.AddWithValue("@MenuItemID", uOrderDetails.MenuItemID);
                 cmd.Parameters.AddWithValue("@Quantity", uOrderDetails.Quantity);
@@ -252,7 +377,6 @@ namespace Restaurant_Data_Access
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", uOrderDetails.OrderDetailsID);
                 cmd.Parameters.AddWithValue("@OrderID", uOrderDetails.OrderID);
                 cmd.Parameters.AddWithValue("@MenuItemID", uOrderDetails.MenuItemID);
                 cmd.Parameters.AddWithValue("@Quantity", uOrderDetails.Quantity);
@@ -273,7 +397,7 @@ namespace Restaurant_Data_Access
             return IsUpdated;
         }
 
-        public static bool IsOrderDetailsExists(int? id)
+        public static bool IsOrderDetailsExists(int? orderId, int? menuItemId)
         {
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -288,7 +412,8 @@ namespace Restaurant_Data_Access
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", id);
+                cmd.Parameters.AddWithValue("@OrderID", orderId);
+                cmd.Parameters.AddWithValue("@MenuItemID", menuItemId);
 
                 SqlParameter returnValue = new SqlParameter
                 {
@@ -313,7 +438,7 @@ namespace Restaurant_Data_Access
             return IsExists;
         }
 
-        public static async Task<bool> IsOrderDetailsExistsAsync(int? id)
+        public static async Task<bool> IsOrderDetailsExistsAsync(int? orderId, int? menuItemId)
         {
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -328,7 +453,8 @@ namespace Restaurant_Data_Access
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", id);
+                cmd.Parameters.AddWithValue("@OrderID", orderId);
+                cmd.Parameters.AddWithValue("@MenuItemID", menuItemId);
 
                 SqlParameter returnValue = new SqlParameter
                 {
@@ -353,7 +479,7 @@ namespace Restaurant_Data_Access
             return IsExists;
         }
 
-        public static bool DeleteOrderDetails(int? id)
+        public static bool DeleteOrderItem(int? orderId, int? menuItemId)
         {
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -364,11 +490,12 @@ namespace Restaurant_Data_Access
             bool IsDeleted = false;
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
-            using (SqlCommand cmd = new SqlCommand("SP_DeleteOrderDetails", conn))
+            using (SqlCommand cmd = new SqlCommand("SP_DeleteOrderItem", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", id);
+                cmd.Parameters.AddWithValue("@OrderID", orderId);
+                cmd.Parameters.AddWithValue("@MenuItemID", menuItemId);
 
                 try
                 {
@@ -378,14 +505,14 @@ namespace Restaurant_Data_Access
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
-                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_DeleteOrderDetails: {ex.Message}", clsUtil.enEventType.Error);
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_DeleteOrderItem: {ex.Message}", clsUtil.enEventType.Error);
                 }
             }
 
             return IsDeleted;
         }
 
-        public static async Task<bool> DeleteOrderDetailsAsync(int? id)
+        public static async Task<bool> DeleteOrderItemAsync(int? orderId, int? menuItemId)
         {
             if (string.IsNullOrEmpty(ConnectionString))
             {
@@ -396,11 +523,12 @@ namespace Restaurant_Data_Access
             bool IsDeleted = false;
 
             using (SqlConnection conn = new SqlConnection(ConnectionString))
-            using (SqlCommand cmd = new SqlCommand("SP_DeleteOrderDetails", conn))
+            using (SqlCommand cmd = new SqlCommand("SP_DeleteOrderItem", conn))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@OrderDetailsID", id);
+                cmd.Parameters.AddWithValue("@OrderID", orderId);
+                cmd.Parameters.AddWithValue("@MenuItemID", menuItemId);
 
                 try
                 {
@@ -410,7 +538,7 @@ namespace Restaurant_Data_Access
                 }
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
-                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_DeleteOrderDetails: {ex.Message}", clsUtil.enEventType.Error);
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_DeleteOrderItem: {ex.Message}", clsUtil.enEventType.Error);
                 }
             }
 
@@ -442,7 +570,6 @@ namespace Restaurant_Data_Access
                         {
                             OrderDetailsList.Add(new OrderDetailsDTO(
 
-                                 reader.GetInt32(reader.GetOrdinal("OrderDetailsID")),
                                  reader.GetInt32(reader.GetOrdinal("OrderID")),
                                  reader.GetInt32(reader.GetOrdinal("MenuItemID")),
                                  reader.GetInt32(reader.GetOrdinal("Quantity")),
@@ -484,7 +611,6 @@ namespace Restaurant_Data_Access
                         while (reader.Read())
                         {
                             OrderDetailsList.Add(new OrderDetailsDTO(
-                                 reader.GetInt32(reader.GetOrdinal("OrderDetailsID")),
                                  reader.GetInt32(reader.GetOrdinal("OrderID")),
                                  reader.GetInt32(reader.GetOrdinal("MenuItemID")),
                                  reader.GetInt32(reader.GetOrdinal("Quantity")),

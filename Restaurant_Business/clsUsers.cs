@@ -86,7 +86,6 @@ namespace Restaurant_Business
             }
             return false;
         }
-
         public async Task<bool> SaveAsync()
         {
             switch (Mode)
@@ -119,7 +118,6 @@ namespace Restaurant_Business
             else
                 return null;
         }
-
         public static async Task<clsUsers?> GetUserByIDAsync(int? id)
         {
             if (id < 1 || id == null) return null;
@@ -134,13 +132,52 @@ namespace Restaurant_Business
                 return null;
         }
 
+        public static UserPsswordDTO? GetUserPassword(int? id)
+        {
+            if (id < 1 || id == null) return null;
+
+            var upDTO = clsUsersData.GetUserPassword(id);
+
+            if (upDTO != null)
+            {
+                return upDTO;
+            }
+            else
+                return null;
+        }
+        public static async Task<UserPsswordDTO?> GetUserPasswordAsync(int? id)
+        {
+            if (id < 1 || id == null) return null;
+
+            var upDTO = await clsUsersData.GetUserPasswordAsync(id);
+
+            if (upDTO != null)
+            {
+                return upDTO;
+            }
+            else
+                return null;
+        }
+
+        public static bool SetUserPassword(UserPsswordDTO newUpDTO)
+        {
+            if (newUpDTO == null) return false;
+
+            return clsUsersData.SetUserPassword(newUpDTO);
+        }
+        public static async Task<bool> SetUserPasswordAsync(UserPsswordDTO newUpDTO)
+        {
+            if (newUpDTO == null) return false;
+
+            return await clsUsersData.SetUserPasswordAsync(newUpDTO);
+        }
+
         public static bool IsUserExists(int? id)
         {
             if (id < 1 || id == null) return false;
 
             return clsUsersData.IsUserExists(id);
         }
-
         public static async Task<bool> IsUserExistsAsync(int? id)
         {
             if (id < 1 || id == null) return false;
@@ -148,13 +185,25 @@ namespace Restaurant_Business
             return await clsUsersData.IsUserExistsAsync(id);
         }
 
-        public static bool DeleteUser(int? id)
+		public static UsersInfoWithoutPasswordDTO? VerifyLoginCredentials(LoginDTO login)
+		{
+			if (string.IsNullOrEmpty(login.Username) || string.IsNullOrEmpty(login.Password)) return null;
+
+			return clsUsersData.VerifyLoginCredentials(login);
+		}
+		public static async Task<UsersInfoWithoutPasswordDTO?> VerifyLoginCredentialsAsync(LoginDTO login)
+		{
+			if (string.IsNullOrEmpty(login.Username) || string.IsNullOrEmpty(login.Password)) return null;
+
+			return await clsUsersData.VerifyLoginCredentialsAsync(login);
+		}
+
+		public static bool DeleteUser(int? id)
         {
             if (id < 1 || id == null) return false;
 
             return clsUsersData.DeleteUser(id);
         }
-
         public static async Task<bool> DeleteUserAsync(int? id)
         {
             if (id < 1 || id == null) return false;
@@ -166,7 +215,6 @@ namespace Restaurant_Business
         {
             return clsUsersData.GetAllUsers();
         }
-
         public static async Task<List<UsersDTO?>> GetAllUsersAsync()
         {
             return await clsUsersData.GetAllUsersAsync();

@@ -18,8 +18,9 @@ namespace Restaurant_Business
                     this.OrderID,
                     this.UserID,
                     this.OrderDate,
-                    this.TotalAmount
-                 );
+                    this.TotalAmount,
+                    this.AppliedTaxRate
+				 );
             }
         }
         public clsOrders(OrdersDTO ODTO, enMode mode = enMode.AddNew)
@@ -28,16 +29,19 @@ namespace Restaurant_Business
             this.UserID = ODTO.UserID;
             this.OrderDate = ODTO.OrderDate;
             this.TotalAmount = ODTO.TotalAmount;
+            this.AppliedTaxRate = ODTO.AppliedTaxRate;
 
             this.Mode = mode;
         }
 
         [Range(0, int.MaxValue, ErrorMessage = "OrderID must be between 0 and the maximum value of an integer.")]
         public int? OrderID { get; set; }
-        public int? UserID { get; set; } // allow null. [Required(ErrorMessage = "OrderDate is required.")]
+        public int? UserID { get; set; } // allow null.
+        [Required(ErrorMessage = "OrderDate is required.")]
         public DateTime OrderDate { get; set; }
         [Required(ErrorMessage = "TotalAmount is required.")]
         public decimal TotalAmount { get; set; }
+        public decimal? AppliedTaxRate { get; set; }
 
         private bool _AddNewOrder()
         {
@@ -101,9 +105,9 @@ namespace Restaurant_Business
             return false;
         }
 
-        public static clsOrders? GetOrderByID(int? id)
+        public static clsOrders? GetOrderByID(int id)
         {
-            if (id < 1 || id == null) return null;
+            if (id < 1) return null;
 
             OrdersDTO? oDTO = clsOrdersData.GetOrderByID(id);
 
@@ -115,9 +119,9 @@ namespace Restaurant_Business
                 return null;
         }
 
-        public static async Task<clsOrders?> GetOrderByIDAsync(int? id)
+        public static async Task<clsOrders?> GetOrderByIDAsync(int id)
         {
-            if (id < 1 || id == null) return null;
+            if (id < 1) return null;
 
             OrdersDTO? oDTO = await clsOrdersData.GetOrderByIDAsync(id);
 
@@ -129,43 +133,56 @@ namespace Restaurant_Business
                 return null;
         }
 
-        public static bool IsOrderExists(int? id)
+        public static bool IsOrderExists(int id)
         {
-            if (id < 1 || id == null) return false;
+            if (id < 1) return false;
 
             return clsOrdersData.IsOrderExists(id);
         }
 
-        public static async Task<bool> IsOrderExistsAsync(int? id)
+        public static async Task<bool> IsOrderExistsAsync(int id)
         {
-            if (id < 1 || id == null) return false;
+            if (id < 1) return false;
 
             return await clsOrdersData.IsOrderExistsAsync(id);
         }
 
-        public static bool DeleteOrder(int? id)
+        public static bool DeleteOrder(int id)
         {
-            if (id < 1 || id == null) return false;
+            if (id < 1) return false;
 
             return clsOrdersData.DeleteOrder(id);
         }
 
-        public static async Task<bool> DeleteOrderAsync(int? id)
+        public static async Task<bool> DeleteOrderAsync(int id)
         {
-            if (id < 1 || id == null) return false;
+            if (id < 1) return false;
 
             return await clsOrdersData.DeleteOrderAsync(id);
         }
 
-        public static List<OrdersDTO?> GetAllOrders()
+        public static IEnumerable<OrdersDTO?> GetAllOrders()
         {
             return clsOrdersData.GetAllOrders();
         }
         
-        public static async Task<List<OrdersDTO?>> GetAllOrdersAsync()
+        public static async Task<IEnumerable<OrdersDTO?>> GetAllOrdersAsync()
         {
             return await clsOrdersData.GetAllOrdersAsync();
         }
 
+        public static InvoiceDTO? GetInvoice(int? orderId)
+        {
+            if (orderId < 0 || !orderId.HasValue || orderId > int.MaxValue) return null; // check OrderId maybe data is not correct.
+            
+            return clsOrdersData.GetInvoice(orderId);
+        }
+        
+        public static async Task<InvoiceDTO?> GetInvoiceAsync(int? orderId)
+        {
+            if (orderId < 0 || !orderId.HasValue || orderId > int.MaxValue) return null; // check OrderId maybe data is not correct.
+            
+            return await clsOrdersData.GetInvoiceAsync(orderId);
+        }
     }
 }

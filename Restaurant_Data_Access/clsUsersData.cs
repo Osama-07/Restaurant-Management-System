@@ -198,6 +198,98 @@ namespace Restaurant_Data_Access
             return null;
         }
 
+        public static UserPsswordDTO? GetUserPassword(int? id)
+        {
+            if (id < 0) return null; // check UserID maybe data is not correct.
+
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            using (SqlCommand cmd = new SqlCommand("SP_GetUserPassword", conn))
+            {
+
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@UserID", id); // UserID parameter.
+
+                try
+                {
+                    conn.Open();
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+
+                        if (reader.Read())
+                        {
+                            return new UserPsswordDTO
+                            (
+                                reader.GetInt32(reader.GetOrdinal("UserID")),
+                                reader.GetString(reader.GetOrdinal("Password"))
+                            );
+                        }
+                        else
+                            return null;
+                    }
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetUserPassword: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return null;
+        }
+
+        public static async Task<UserPsswordDTO?> GetUserPasswordAsync(int? id)
+        {
+            if (id < 0) return null; // check UserID maybe data is not correct.
+
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            using (SqlCommand cmd = new SqlCommand("SP_GetUserPassword", conn))
+            {
+
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@UserID", id); // UserID parameter.
+
+                try
+                {
+                    await conn.OpenAsync();
+
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+
+                        if (reader.Read())
+                        {
+                            return new UserPsswordDTO
+                            (
+                                reader.GetInt32(reader.GetOrdinal("UserID")),
+                                reader.GetString(reader.GetOrdinal("Password"))
+                            );
+                        }
+                        else
+                            return null;
+                    }
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_GetUserPassword: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return null;
+        }
+
         public static bool UpdateUser(UsersDTO uUser)
         {
             if (string.IsNullOrEmpty(ConnectionString))
@@ -260,6 +352,70 @@ namespace Restaurant_Data_Access
                 catch (Exception ex) when (ex is SqlException || ex is Exception)
                 {
                     clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_UpdateUser: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return IsUpdated;
+        }
+
+        public static bool SetUserPassword(UserPsswordDTO uUser)
+        {
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+            bool IsUpdated = false;
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            using (SqlCommand cmd = new SqlCommand("SP_SetUserPassword", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@UserID", uUser.UserID);
+                cmd.Parameters.AddWithValue("@Password", uUser.Password);
+
+                try
+                {
+                    conn.Open();
+
+                    IsUpdated = cmd.ExecuteNonQuery() > 0;
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_SetUserPassword: {ex.Message}", clsUtil.enEventType.Error);
+                }
+            }
+
+            return IsUpdated;
+        }
+
+        public static async Task<bool> SetUserPasswordAsync(UserPsswordDTO uUser)
+        {
+            if (string.IsNullOrEmpty(ConnectionString))
+            {
+                clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+                throw new InvalidOperationException("ConnectionString is not set.");
+            }
+            bool IsUpdated = false;
+
+            using (SqlConnection conn = new SqlConnection(ConnectionString))
+            using (SqlCommand cmd = new SqlCommand("SP_SetUserPassword", conn))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@UserID", uUser.UserID);
+                cmd.Parameters.AddWithValue("@Password", uUser.Password);
+
+                try
+                {
+                    await conn.OpenAsync();
+
+                    IsUpdated = await cmd.ExecuteNonQueryAsync() > 0;
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_SetUserPassword: {ex.Message}", clsUtil.enEventType.Error);
                 }
             }
 
@@ -346,7 +502,113 @@ namespace Restaurant_Data_Access
             return IsExists;
         }
 
-        public static bool DeleteUser(int? id)
+		public static UsersInfoWithoutPasswordDTO? VerifyLoginCredentials(LoginDTO login)
+		{
+			if (string.IsNullOrEmpty(ConnectionString))
+			{
+				clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+				throw new InvalidOperationException("ConnectionString is not set.");
+			}
+
+            var userInfo = new UsersInfoWithoutPasswordDTO(0, string.Empty, string.Empty);
+
+			using (SqlConnection conn = new SqlConnection(ConnectionString))
+			using (SqlCommand cmd = new SqlCommand("SP_VerifyLoginCredentials", conn))
+			{
+				cmd.CommandType = CommandType.StoredProcedure;
+
+				cmd.Parameters.AddWithValue("@Username", login.Username);
+				cmd.Parameters.AddWithValue("@Password", login.Password);
+
+				SqlParameter returnValue = new SqlParameter
+				{
+					Direction = ParameterDirection.ReturnValue
+				};
+				cmd.Parameters.Add(returnValue);
+
+				try
+				{
+					conn.Open();
+
+					using (SqlDataReader reader = cmd.ExecuteReader())
+					{
+
+						if (reader.Read())
+						{
+							userInfo = new UsersInfoWithoutPasswordDTO
+							(
+								reader.GetInt32(reader.GetOrdinal("UserID")),
+								reader.GetString(reader.GetOrdinal("Username")),
+								reader.GetString(reader.GetOrdinal("Role"))
+							);
+						}
+						else
+							userInfo = null;
+					}
+				}
+				catch (Exception ex) when (ex is SqlException || ex is Exception)
+				{
+					clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_IsLoginInfoCorrect: {ex.Message}", clsUtil.enEventType.Error);
+				}
+			}
+
+			return userInfo;
+		}
+
+		public static async Task<UsersInfoWithoutPasswordDTO?> VerifyLoginCredentialsAsync(LoginDTO login)
+		{
+			if (string.IsNullOrEmpty(ConnectionString))
+			{
+				clsUtil.StoreEventInEventLogs(SourceName, $"Connection string is not set.", clsUtil.enEventType.Error);
+				throw new InvalidOperationException("ConnectionString is not set.");
+			}
+
+            var userInfo = new UsersInfoWithoutPasswordDTO(0, string.Empty, string.Empty);
+
+			using (SqlConnection conn = new SqlConnection(ConnectionString))
+			using (SqlCommand cmd = new SqlCommand("SP_VerifyLoginCredentials", conn))
+			{
+				cmd.CommandType = CommandType.StoredProcedure;
+
+				cmd.Parameters.AddWithValue("@Username", login.Username);
+				cmd.Parameters.AddWithValue("@Password", login.Password);
+
+				SqlParameter returnValue = new SqlParameter
+				{
+					Direction = ParameterDirection.ReturnValue
+				};
+				cmd.Parameters.Add(returnValue);
+
+                try
+                {
+                    await conn.OpenAsync();
+
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+
+                        if (await reader.ReadAsync())
+                        {
+                            userInfo = new UsersInfoWithoutPasswordDTO
+							(
+                                reader.GetInt32(reader.GetOrdinal("UserID")),
+                                reader.GetString(reader.GetOrdinal("Username")),
+                                reader.GetString(reader.GetOrdinal("Role"))
+                            );
+                        }
+                        else
+                            userInfo = null;
+                    }
+                }
+                catch (Exception ex) when (ex is SqlException || ex is Exception)
+                {
+                    clsUtil.StoreEventInEventLogs(SourceName, $"Error SP_IsLoginInfoCorrect: {ex.Message}", clsUtil.enEventType.Error);
+                }
+			}
+
+			return userInfo;
+		}
+
+		public static bool DeleteUser(int? id)
         {
             if (string.IsNullOrEmpty(ConnectionString))
             {

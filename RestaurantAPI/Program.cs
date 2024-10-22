@@ -13,6 +13,18 @@ namespace RestaurantAPI
             // Initialize clsDataSettings with configuration.
             clsDataSettings.Initialize(builder.Configuration);
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAllOrigins",
+                        builder =>
+                        {
+                            builder.AllowAnyOrigin()
+                                   .AllowAnyMethod()
+                                   .AllowAnyHeader();
+                        });
+            });
+
+
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -26,11 +38,15 @@ namespace RestaurantAPI
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+            app.UseSwagger();
+			app.UseSwaggerUI();
 
-            app.UseHttpsRedirection();
+			// Enable CORS
+			app.UseCors("AllowAllOrigins");
+
+			app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 

@@ -15,7 +15,6 @@ namespace Restaurant_Business
             {
                 return new OrderDetailsDTO
                  (
-                    this.OrderDetailsID,
                     this.OrderID,
                     this.MenuItemID,
                     this.Quantity,
@@ -25,7 +24,6 @@ namespace Restaurant_Business
         }
         public clsOrderDetails(OrderDetailsDTO ODTO, enMode mode = enMode.AddNew)
         {
-            this.OrderDetailsID = ODTO.OrderDetailsID;
             this.OrderID = ODTO.OrderID;
             this.MenuItemID = ODTO.MenuItemID;
             this.Quantity = ODTO.Quantity;
@@ -34,8 +32,6 @@ namespace Restaurant_Business
             this.Mode = mode;
         }
 
-        [Range(0, int.MaxValue, ErrorMessage = "OrderDetailsID must be between 0 and the maximum value of an integer.")]
-        public int? OrderDetailsID { get; set; }
         [Required(ErrorMessage = "OrderID is required.")]
         public int OrderID { get; set; }
         [Required(ErrorMessage = "MenuItemID is required.")]
@@ -47,16 +43,17 @@ namespace Restaurant_Business
 
         private bool _AddNewOrderDetails()
         {
-            this.OrderDetailsID = clsOrderDetailsData.AddNewOrderDetails(ODTO);
-
-            return (this.OrderDetailsID > 0);
+            return clsOrderDetailsData.AddNewOrderDetails(ODTO);
         }
 
         private async Task<bool> _AddNewOrderDetailsAsync()
         {
-            this.OrderDetailsID = await clsOrderDetailsData.AddNewOrderDetailsAsync(ODTO);
+            return await clsOrderDetailsData.AddNewOrderDetailsAsync(ODTO);
+        }
 
-            return (this.OrderDetailsID > 0);
+        public static async Task<bool> AddNewListOrderDetailsAsync(List<OrderDetailsDTO> orderDetails)
+        {
+            return await clsOrderDetailsData.AddNewListOrderDetailsAsync(orderDetails);
         }
 
         private bool _UpdateOrderDetails()
@@ -107,11 +104,11 @@ namespace Restaurant_Business
             return false;
         }
 
-        public static clsOrderDetails? GetOrderDetailsByID(int? id)
+        public static clsOrderDetails? GetOrderDetailsByOrderID(int? orderId, int? menuItemId)
         {
-            if (id < 1 || id == null) return null;
+            if (orderId < 1 || orderId == null || menuItemId < 1 || menuItemId == null) return null;
 
-            OrderDetailsDTO? oDTO = clsOrderDetailsData.GetOrderDetailsByID(id);
+            OrderDetailsDTO? oDTO = clsOrderDetailsData.GetOrderDetailsByOrderID(orderId, menuItemId);
 
             if (oDTO != null)
             {
@@ -121,11 +118,11 @@ namespace Restaurant_Business
                 return null;
         }
 
-        public static async Task<clsOrderDetails?> GetOrderDetailsByIDAsync(int? id)
+        public static async Task<clsOrderDetails?> GetOrderDetailsByOrderIDAsync(int? orderId, int? menuItemId)
         {
-            if (id < 1 || id == null) return null;
+            if (orderId < 1 || orderId == null || menuItemId < 1 || menuItemId == null) return null;
 
-            OrderDetailsDTO? oDTO = await clsOrderDetailsData.GetOrderDetailsByIDAsync(id);
+            OrderDetailsDTO? oDTO = await clsOrderDetailsData.GetOrderDetailsByOrderIDAsync(orderId, menuItemId);
 
             if (oDTO != null)
             {
@@ -135,32 +132,46 @@ namespace Restaurant_Business
                 return null;
         }
 
-        public static bool IsOrderDetailsExists(int? id)
+        public static List<OrderDetailsDTO?> GetListOrderDetailsByOrderID(int? orderId)
         {
-            if (id < 1 || id == null) return false;
+            if (orderId < 1 || orderId == null) return null!;
 
-            return clsOrderDetailsData.IsOrderDetailsExists(id);
+            return clsOrderDetailsData.GetListOrderDetailsByOrderID(orderId);
         }
 
-        public static async Task<bool> IsOrderDetailsExistsAsync(int? id)
+        public static async Task<List<OrderDetailsDTO?>> GetListOrderDetailsByOrderIDAsync(int? orderId)
         {
-            if (id < 1 || id == null) return false;
+            if (orderId < 1 || orderId == null) return null!;
 
-            return await clsOrderDetailsData.IsOrderDetailsExistsAsync(id);
+            return await clsOrderDetailsData.GetListOrderDetailsByOrderIDAsync(orderId);
         }
 
-        public static bool DeleteOrderDetailsByID(int? id)
+        public static bool IsOrderDetailsExists(int? orderId, int? menuItemId)
         {
-            if (id < 1 || id == null) return false;
+            if (orderId < 1 || orderId == null || menuItemId < 1 || menuItemId == null) return false;
 
-            return clsOrderDetailsData.DeleteOrderDetails(id);
+            return clsOrderDetailsData.IsOrderDetailsExists(orderId, menuItemId);
         }
 
-        public static async Task<bool> DeleteOrderDetailsAsync(int? id)
+        public static async Task<bool> IsOrderDetailsExistsAsync(int? orderId, int? menuItemId)
         {
-            if (id < 1 || id == null) return false;
+            if (orderId < 1 || orderId == null || menuItemId < 1 || menuItemId == null) return false;
 
-            return await clsOrderDetailsData.DeleteOrderDetailsAsync(id);
+            return await clsOrderDetailsData.IsOrderDetailsExistsAsync(orderId, menuItemId);
+        }
+
+        public static bool DeleteOrderItem(int? orderId, int? menuItemId)
+        {
+            if (orderId < 1 || orderId == null || menuItemId < 1 || menuItemId == null) return false;
+
+            return clsOrderDetailsData.DeleteOrderItem(orderId, menuItemId);
+        }
+
+        public static async Task<bool> DeleteOrderItemAsync(int? orderId, int? menuItemId)
+        {
+            if (orderId < 1 || orderId == null || menuItemId < 1 || menuItemId == null) return false;
+
+            return await clsOrderDetailsData.DeleteOrderItemAsync(orderId, menuItemId);
         }
 
         public static List<OrderDetailsDTO?> GetAllOrderDetails()
